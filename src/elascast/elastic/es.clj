@@ -87,11 +87,15 @@
 (def elasticport 9200)
 
 (def elascast-index-name "elascast")  ; exports namespace global var
+
+; each document has 3 colns, author, content json, and address fields.
+; address has tags list, and include/exclude list. 
+(def elascast-mapping-type ["author" "address" "content"])
 (def elascast-mapping-type-name "info") ; prescribing highlights of info 
 
-
 ; forward declaration
-(declare register-query)
+(declare register-address)
+(declare percolate)
 
 
 ; wrap connecting fn
@@ -106,54 +110,54 @@
 ; curl -XGET localhost:9200/dodgersdata/data/_mapping?pretty=true
 ; http://www.elasticsearch.org/guide/reference/mapping/core-types/
 (defn create-elascast-info-mapping-type
-  "ret a mapping type for drug index with all types of string"
-  [mapping-name]
-  (let [section-type {:type "string"}  ; each section assoced with section-type
-        schema (reduce #(assoc %1 (keyword %2) section-type) {} ["address" "content"])]
+  "ret mapping scheme with name and type fields"
+  [mapping-name mapping-type]
+  (let [field-type {:type "string"}  ; each field assoced with field-type
+        schema (reduce #(assoc %1 (keyword %2) field-type) {} mapping-type)]
     (hash-map mapping-name {:properties schema})))
 
 
 ; index is db and each mapping types in index is a table.
 (defn create-index
-  "create index with the passing name and mapping types only "
+  "create index with the passing name and mapping types only"
   [idxname mappings]
   (if-not (esi/exists? idxname)  ; create index only when does not exist
-  (esi/create idxname :mappings mappings)))
-
-
-; the order of input info json list must match the order of sections.
-(defn create-doc
-  "create a document by adding address info"
-  [content address]
-  (apply merge {:address address} {:content content}))
+    (esi/create idxname :mappings mappings)))
 
 
 (defn create-elascast-index
   "create elascast index to store user document with address"
   []
-  (let [mapping-type (create-elascast-info-mapping-type elascast-mapping-type-name)]
+  (let [mapping-type (create-elascast-info-mapping-type 
+                        elascast-mapping-type-name
+                        elascast-mapping-type)]
     (prn "index mapping-type " mapping-type)
     (create-index elascast-index-name mapping-type)))
 
 
-(defn insert-doc
-  "insert addressable doc into index "
-  [content address]
-  (let [mapping (esi/get-mapping elascast-index-name )
-        docjson (create-doc content address)]
+; the order of input info json list must match the order of sections.
+(defn create-doc
+  "create a document by adding address info"
+  [author content address]
+  (apply merge {:author author} {:address address} {:content content}))
+
+
+(defn submit-doc
+  "submit an addressable doc into index and percolate the doc"
+  [docjson]
+  (let [mapping (esi/get-mapping elascast-index-name)
+        ;docjson (create-doc author content address)
+        ]
     (prn "inserting doc " docjson)
-    (esd/create elascast-index-name elascast-mapping-type-name docjson)))
+    (esd/create elascast-index-name elascast-mapping-type-name docjson)
+    (percolate "percolation" docjson)))  ; percolate the document
 
 
-(defn address-query-string 
-  "query term in drug index info mapping in field"
-  [field keyname]
-  (let [now (clj-time/now) 
-        pre (clj-time/minus now (clj-time/hours 20))  ; from now back 1 days
-        nowfmt (clj-time.format/unparse (clj-time.format/formatters :date-time) now)]
-    (q/query-string
-      :fields field
-      :query (str keyname))))
+; delete doc match all
+(defn delete-doc
+  "delete doc from the index"
+  []
+  (esd/delete-by-query elascast-index-name elascast-mapping-type-name (q/match-all)))
 
 
 (defn elastic-query [idxname query process-fn]
@@ -175,7 +179,18 @@
   "searched out docs are in hits ary, iterate the list"
   [hits]
   (map prn hits))   ; for each item, print
+
   
+(defn address-query-string 
+  "query term in drug index info mapping in field"
+  [field keyname]
+  (let [now (clj-time/now) 
+        pre (clj-time/minus now (clj-time/hours 20))  ; from now back 1 days
+        nowfmt (clj-time.format/unparse (clj-time.format/formatters :date-time) now)]
+    (q/query-string
+      :fields field
+      :query (str keyname))))
+
 
 (defn search
   "search in elascast index using address and key word"
@@ -183,3 +198,32 @@
   (let [search-fields (if (nil? address) "content" address)
         qstring (address-query-string qword)]
     (elastic-query elascast-index-name qstring process-hits)))
+
+
+(defn term-query-address
+  "form term query to address field that contains a term(not analyzed)"
+  [term]
+  (q/term :address term))
+
+
+; blocking call to percolate query 
+(defn percolate
+  "percolate query blocking only when matching doc found"
+  [pname docjson]
+  (let [response (pcl/percolate elascast-index-name pname :doc docjson)]
+    (prn (esrsp/ok? response))
+    (prn (esrsp/matches-from response))))
+
+
+; register address query to percolator
+(defn register-query-address
+  "register address query again elascast index to percolator "
+  [pname address]
+  (prn "registering address query " pname address)
+  (let [termq (term-query-address address)]
+    (pcl/register-query elascast-index-name pname :query termq)))
+    
+
+
+
+

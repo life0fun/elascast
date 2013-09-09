@@ -15,6 +15,7 @@
 (def help-info (list " -------------------------"
                      "lein run populate docfile "
                      "lein run create-elascast-index"
+                     "lein run register-address <name> <address>"
                      ""
                 ))
 
@@ -26,22 +27,39 @@
   (es/create-elascast-index))
 
 
-(defn insert-single-doc
+; doc json in format {:address {:tag []} :content {:author ... :text ...}}
+(defn submit-single-doc
   "insert a doc with address and content json"
-  [ docjson ] ; doc json in format {:address {:tag []} :content {:author ... :text ...}}
-  (prn "insert-doc " docjson)
-  (es/insert-doc docjson))
+  [ docjson ]
+  (es/submit-doc docjson))
 
 
-(defn insert-doc
+; read lines from docfile
+(defn submit-doc
   "insert docs from txt file. each line is a doc and must be a json"
   [docfile]
   (let [docl (helper/get-doc docfile)]
-    (doall insert-single-doc docl)))
+    (map submit-single-doc docl)))
 
+; register 
+(defn register-query-address
+  "registery address query with query address for doc percolate"
+  [qname address]
+  (es/register-query-address qname address))
+
+
+;delete document from index
+(defn delete-doc
+  "delete all doc from index"
+  []
+  (es/delete-doc))
 
 (defn -main [& args]
   (doall (map prn help-info))
   (case (first args)
     "create-index" (create-elascast-index)
-    "insert-doc" (insert-doc (second args))))
+    "register-query" (register-query-address (second args) (last args))
+    "submit-doc" (submit-doc (second args))
+    "delete-doc" (delete-doc)))
+
+
