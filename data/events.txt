@@ -4,4 +4,4 @@ elasticsearch, percolator, search:fulltext
 
 elastic
 elasticsearch aggregation module due on 1.0.
-elasticsearch, aggregation, search:fulltext:aggregation
+elasticsearch, search:fulltext:aggregation

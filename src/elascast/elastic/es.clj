@@ -212,16 +212,24 @@
   [pname docjson]
   (let [response (pcl/percolate elascast-index-name pname :doc docjson)]
     (prn (esrsp/ok? response))
+    ;response rets matched query-name, {:ok true, :matches ["client-1" "client-2"]}
+    (prn response)
     (prn (esrsp/matches-from response))))
 
 
+; unregister address query to percolator
+(defn unregister-query-address
+  "unregister address query against elascast index to percolator "
+  [pname]
+  (pcl/unregister-query elascast-index-name pname))
+
 ; register address query to percolator
 (defn register-query-address
-  "register address query again elascast index to percolator "
+  "register address query against elascast index to percolator "
   [pname address]
   (prn "registering address query " pname address)
   (let [termq (term-query-address address)]
-    (pcl/register-query elascast-index-name pname :query termq)))
+    (pcl/register-query elascast-index-name pname :query termq :as "test1")))
     
 
 

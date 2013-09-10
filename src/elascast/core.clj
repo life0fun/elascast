@@ -44,8 +44,13 @@
 ; register 
 (defn register-query-address
   "registery address query with query address for doc percolate"
-  [qname address]
+  [qname address] 
   (es/register-query-address qname address))
+
+(defn unregister-query-address
+  "registery address query with query address for doc percolate"
+  [qname] 
+  (es/unregister-query-address qname))
 
 
 ;delete document from index
@@ -58,7 +63,11 @@
   (doall (map prn help-info))
   (case (first args)
     "create-index" (create-elascast-index)
+    ; register-query query-name keyword
     "register-query" (register-query-address (second args) (last args))
+    ; unregister-query query-name
+    "unregister-query" (unregister-query-address (second args))
+    ; submit-doc data/events.txt
     "submit-doc" (submit-doc (second args))
     "delete-doc" (delete-doc)))
 
