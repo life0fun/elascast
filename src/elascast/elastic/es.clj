@@ -79,6 +79,10 @@
 ; always use (formatters :data-time) formatter.
 ;
 
+; the _percolator which holds the repository of registered queries is just a another index.
+; the index name that percolator query against for is represented as the type in _percolator index.
+; we use q/
+
 ; globals
 (def ^:dynamic *es-conn*)
 
@@ -142,6 +146,7 @@
   (apply merge {:author author} {:address address} {:content content}))
 
 
+; after submitting the doc, call percolate to find out which query waiting for it.
 (defn submit-doc
   "submit an addressable doc into index and percolate the doc"
   [docjson]
@@ -200,21 +205,25 @@
     (elastic-query elascast-index-name qstring process-hits)))
 
 
-(defn term-query-address
-  "form term query to address field that contains a term(not analyzed)"
-  [term]
-  (q/term :address term))
+; wildcard query: (esd/search "tweets" "tweet" :query {:wildcard {:username "*werkz"}})
+(defn query-address
+  "form wildcard query to address field (not analyzed)"
+  [addr]
+  ;(q/term :address term))
+  ;(q/field :address (str "*" term "*")))
+  (q/wildcard :address (str "*" addr "*")))
+  
 
 
-; blocking call to percolate query 
+; called after doc submmited to ES, find out all matched queries for it.
 (defn percolate
   "percolate query blocking only when matching doc found"
   [pname docjson]
   (let [response (pcl/percolate elascast-index-name pname :doc docjson)]
     (prn (esrsp/ok? response))
     ;response rets matched query-name, {:ok true, :matches ["client-1" "client-2"]}
-    (prn response)
-    (prn (esrsp/matches-from response))))
+    ;(prn response)
+    (prn "percolate query matches " (esrsp/matches-from response))))
 
 
 ; unregister address query to percolator
@@ -223,13 +232,16 @@
   [pname]
   (pcl/unregister-query elascast-index-name pname))
 
-; register address query to percolator
+
+; registered percolator queries are just a doc under _percolator/index-name/query-name.
+; one can filter the queries that will be used to percolate a doc, to reduce the number
+; of percolate queries needed 
 (defn register-query-address
   "register address query against elascast index to percolator "
   [pname address]
   (prn "registering address query " pname address)
-  (let [termq (term-query-address address)]
-    (pcl/register-query elascast-index-name pname :query termq :as "test1")))
+  (let [q (query-address address)]
+    (pcl/register-query elascast-index-name pname :query q)))
     
 
 

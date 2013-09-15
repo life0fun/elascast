@@ -14,8 +14,9 @@
 (defn make-map
   "convert a string line read from data into json object"
   [author content filters]   ; destruct assignment
-  (let [f (str/split filters #",")]   ; filter separated by comma
-    (hash-map :author author :content content :address f)))
+  (let [f (str/split filters #",")
+        trmf (map str/trim f)]   ; filter separated by comma
+    (hash-map :author author :content content :address trmf)))
 
 
 ; each doc is 3 lines,  content, filters, and separation line

@@ -47,6 +47,7 @@
   [qname address] 
   (es/register-query-address qname address))
 
+; deleting _percolator index does not rm registered queries
 (defn unregister-query-address
   "registery address query with query address for doc percolate"
   [qname] 
@@ -64,9 +65,9 @@
   (case (first args)
     "create-index" (create-elascast-index)
     ; register-query query-name keyword
-    "register-query" (register-query-address (second args) (last args))
+    "register" (register-query-address (second args) (last args))
     ; unregister-query query-name
-    "unregister-query" (unregister-query-address (second args))
+    "unregister" (unregister-query-address (second args))
     ; submit-doc data/events.txt
     "submit-doc" (submit-doc (second args))
     "delete-doc" (delete-doc)))

@@ -1,7 +1,7 @@
 clojure
 elasticsearch is awesome, register callback query to percolator.
-elasticsearch, percolator, search:fulltext
+elasticsearch, percolator, search:fulltext:percolator east:coder:lucene
 
 elastic
 elasticsearch aggregation module due on 1.0.
-elasticsearch, search:fulltext:aggregation
+elasticsearch, search:fulltext:aggregation pacific:coder:elastic
