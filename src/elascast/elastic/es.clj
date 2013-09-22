@@ -187,7 +187,7 @@
 
   
 (defn address-query-string 
-  "query term in drug index info mapping in field"
+  "query string for addr filed"
   [field keyname]
   (let [now (clj-time/now) 
         pre (clj-time/minus now (clj-time/hours 20))  ; from now back 1 days
@@ -206,14 +206,17 @@
 
 
 ; wildcard query: (esd/search "tweets" "tweet" :query {:wildcard {:username "*werkz"}})
+; not only wildcard query works, regexp query also works. query-dsl/regexp-query/
+; can not use more like this API or query, b/c it need analyze stored doc, means the
+; doc fields need to be analyzed by ES when storing. Here percolated doc is not yet analyzed.
 (defn query-address
   "form wildcard query to address field (not analyzed)"
   [addr]
   ;(q/term :address term))
   ;(q/field :address (str "*" term "*")))
-  (q/wildcard :address (str "*" addr "*")))
+  ;(q/wildcard :address (str "*" addr "*")))
+  (hash-map "regexp" {:address (str "search:.*:" addr)}))
   
-
 
 ; called after doc submmited to ES, find out all matched queries for it.
 (defn percolate
